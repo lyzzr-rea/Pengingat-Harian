@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task Reminder App</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="icon-192.png"
+    <meta name="theme-color" content="#007aff" />
+  </head>
+  <body>
+    <div class="phone-frame">
+      <div class="app-header">
+        <h2>Reminders</h2>
+        <button id="theme-toggle">🌙</button>
+      </div>
+
+      <div class="filters">
+        <button class="filter-btn active" data-filter="All">All</button>
+        <button class="filter-btn" data-filter="Tugas">Tugas</button>
+        <button class="filter-btn" data-filter="Personal">Personal</button>
+        <button class="filter-btn" data-filter="Acara">Acara</button>
+        <button class="filter-btn" data-filter="Janjian">Janjian</button>
+      </div>
+
+      <div class="add-task">
+        <input type="text" id="task-input" placeholder="New reminder..." />
+        <select id="category-input">
+          <option value="Tugas">Tugas</option>
+          <option value="Personal">Personal</option>
+          <option value="Acara">Acara</option>
+          <option value="Janjian">Janjian</option>
+        </select>
+        <input type="date" id="date-input" />
+        <div class="time-inputs">
+          <input
+            type="number"
+            id="hours-input"
+            placeholder="HH"
+            min="0"
+            max="23"
+          />
+          <input
+            type="number"
+            id="minutes-input"
+            placeholder="MM"
+            min="0"
+            max="59"
+          />
+          <input
+            type="number"
+            id="seconds-input"
+            placeholder="SS"
+            min="0"
+            max="59"
+          />
+        </div>
+        <button id="add-btn">Add</button>
+      </div>
+
+      <ul id="task-list" class="task-list"></ul>
+      <audio id="delete-sound" preload="auto">
+        <source
+          src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA="
+          type="audio/wav"
+        />
+      </audio>
+      <audio id="alarm-sound" src="alarm.mp3"></audio>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
