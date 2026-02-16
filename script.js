@@ -1,9 +1,19 @@
 // === PWA Service Worker ===
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js");
+  navigator.serviceWorker.register("sw.js")
+    .then(reg => console.log("Service Worker registered", reg))
+    .catch(err => console.error("Service Worker registration failed", err));
+}
+
+// Request izin notifikasi saat halaman dimuat
+if ("Notification" in window) {
+  Notification.requestPermission().then(perm => {
+    console.log("Notification permission:", perm);
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Elemen DOM
   const taskInput = document.getElementById("task-input");
   const dateInput = document.getElementById("date-input");
   const hoursInput = document.getElementById("hours-input");
@@ -14,8 +24,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const categoryInput = document.getElementById("category-input");
   const filterButtons = document.querySelectorAll(".filter-btn");
   const themeToggle = document.getElementById("theme-toggle");
-
-  // View toggle elements
   const viewBtns = document.querySelectorAll(".view-btn");
   const listView = document.getElementById("list-view");
   const calendarView = document.getElementById("calendar-view");
@@ -25,39 +33,37 @@ document.addEventListener("DOMContentLoaded", () => {
   const calendarGrid = document.getElementById("calendar-grid");
   const selectedDateSpan = document.getElementById("selected-date");
   const taskListDate = document.getElementById("task-list-date");
+  const deleteSound = document.getElementById("delete-sound");
+  const alarmSound = document.getElementById("alarm-sound");
 
+  // State
   let currentFilter = "All";
   let tasks = [];
   let currentView = "list"; // 'list' atau 'calendar'
-  let currentMonth = new Date(); // bulan yang ditampilkan di kalender
+  let currentMonth = new Date(); // untuk kalender
 
-  // 🔓 Unlock audio on first click
+  // 🔓 Unlock audio on first click (agar sound bisa diputar nantinya)
   document.addEventListener(
     "click",
     () => {
-      const s = document.getElementById("delete-sound");
-      if (s) {
-        s.play()
+      if (deleteSound) {
+        deleteSound.play()
           .then(() => {
-            s.pause();
-            s.currentTime = 0;
+            deleteSound.pause();
+            deleteSound.currentTime = 0;
           })
           .catch(() => {});
       }
     },
-    { once: true },
+    { once: true }
   );
 
-  // 🌙 Dark Mode
+  // 🌙 Dark mode toggle
   if (themeToggle) {
     themeToggle.addEventListener("click", () => {
       document.body.classList.toggle("dark");
+      themeToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
     });
-  }
-
-  // 🔔 Notification permission
-  if ("Notification" in window) {
-    Notification.requestPermission();
   }
 
   // ===== Local Storage =====
@@ -70,8 +76,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (data) {
       tasks = JSON.parse(data).map((t) => {
         t.date = new Date(t.date);
+        // Jika ada timeoutId, jangan simpan karena akan di-reset
         return t;
       });
+      // Reset semua timeout setelah load
+      tasks.forEach(task => startTimer(task));
     }
   }
 
@@ -88,6 +97,24 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // ===== VIEW TOGGLE =====
+  viewBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      viewBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentView = btn.dataset.view;
+      if (currentView === "list") {
+        listView.classList.remove("hidden");
+        calendarView.classList.add("hidden");
+        renderTasks(); // refresh list
+      } else {
+        listView.classList.add("hidden");
+        calendarView.classList.remove("hidden");
+        renderCalendar();
+      }
+    });
+  });
+
   // ===== ADD TASK =====
   addBtn.addEventListener("click", () => {
     const taskText = taskInput.value.trim();
@@ -96,13 +123,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const minutes = parseInt(minutesInput.value) || 0;
     const seconds = parseInt(secondsInput.value) || 0;
 
-    if (!taskText || !dateValue) return alert("Isi task & tanggal!");
+    if (!taskText || !dateValue) {
+      alert("Isi task & tanggal!");
+      return;
+    }
 
     const reminderDate = new Date(dateValue);
     reminderDate.setHours(hours, minutes, seconds, 0);
     const timeDiff = reminderDate.getTime() - Date.now();
 
-    if (timeDiff <= 0) return alert("Waktu harus di masa depan!");
+    if (timeDiff <= 0) {
+      alert("Waktu harus di masa depan!");
+      return;
+    }
 
     const task = {
       id: Date.now(),
@@ -116,22 +149,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     tasks.push(task);
     saveTasks();
-    renderTasks();
     startTimer(task);
+    renderTasks();
+    if (currentView === "calendar") renderCalendar();
 
+    // Reset form
     taskInput.value = "";
     dateInput.value = "";
     hoursInput.value = "";
     minutesInput.value = "";
     secondsInput.value = "";
-
-    // Jika sedang di kalender, render ulang
-    if (currentView === "calendar") {
-      renderCalendar();
-    }
   });
 
-  // ===== RENDER TASKS (LIST VIEW) =====
+  // ===== RENDER LIST =====
   function renderTasks() {
     taskList.innerHTML = "";
 
@@ -165,25 +195,53 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ===== TIMER + BACKGROUND NOTIFICATION =====
+  // ===== TIMER + NOTIFICATION =====
   function startTimer(task) {
-    task.timeoutId = setTimeout(() => {
+    // Hapus timer lama jika ada
+    if (task.timeoutId) clearTimeout(task.timeoutId);
+
+    const waktuTersisa = task.date.getTime() - Date.now();
+    if (waktuTersisa <= 0) return;
+
+    task.timeoutId = setTimeout(async () => {
+      // Cek izin notifikasi
       if (Notification.permission === "granted") {
-        navigator.serviceWorker.ready.then((reg) => {
-          reg.showNotification("Task Reminder", {
+        // Coba kirim via Service Worker
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          registration.showNotification("⏰ Task Reminder", {
             body: task.text,
             icon: "icon-192.png",
             badge: "icon-192.png",
+            vibrate: [200, 100, 200],
+            tag: task.id.toString(),
+            renotify: true,
+            actions: [{ action: "open", title: "Buka Aplikasi" }]
           });
-        });
+        } else {
+          // Fallback ke Notification biasa
+          new Notification("⏰ Task Reminder", {
+            body: task.text,
+            icon: "icon-192.png",
+          });
+        }
+      } else {
+        // Fallback alert
+        alert(`⏰ Waktunya: ${task.text}`);
       }
 
-      deleteTask(task.id);
-    }, task.time);
+      // Putar suara alarm jika diizinkan (dan file tersedia)
+      if (alarmSound) {
+        alarmSound.play().catch(e => console.log("Alarm sound failed", e));
+      }
+
+      // Hapus task setelah notifikasi
+      deleteTask(task.id, { skipSound: true }); // jangan bunyi sound hapus
+    }, waktuTersisa);
   }
 
-  // ===== DELETE + SOUND =====
-  window.deleteTask = (id) => {
+  // ===== DELETE =====
+  window.deleteTask = (id, options = {}) => {
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
 
@@ -191,18 +249,15 @@ document.addEventListener("DOMContentLoaded", () => {
     tasks = tasks.filter((t) => t.id !== id);
     saveTasks();
 
-    const sound = document.getElementById("delete-sound");
-    if (sound) {
-      sound.currentTime = 0;
-      sound.play().catch(() => {});
+    if (!options.skipSound && deleteSound) {
+      deleteSound.currentTime = 0;
+      deleteSound.play().catch(() => {});
     }
 
     if (navigator.vibrate) navigator.vibrate(80);
 
     renderTasks();
-    if (currentView === "calendar") {
-      renderCalendar();
-    }
+    if (currentView === "calendar") renderCalendar();
   };
 
   window.toggleDone = (id) => {
@@ -211,9 +266,7 @@ document.addEventListener("DOMContentLoaded", () => {
       task.done = !task.done;
       saveTasks();
       renderTasks();
-      if (currentView === "calendar") {
-        renderCalendar();
-      }
+      if (currentView === "calendar") renderCalendar();
     }
   };
 
@@ -221,63 +274,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
     const newText = prompt("Edit task:", task.text);
-    if (newText) {
+    if (newText && newText.trim() !== "") {
       task.text = newText.trim();
       saveTasks();
       renderTasks();
-      if (currentView === "calendar") {
-        renderCalendar();
-      }
+      if (currentView === "calendar") renderCalendar();
     }
   };
 
-  // ===== SWIPE DELETE (MOBILE) =====
-  let touchStartX = 0;
-
-  taskList.addEventListener("touchstart", (e) => {
-    const li = e.target.closest(".task-item");
-    if (!li) return;
-    touchStartX = e.touches[0].clientX;
-    li.dataset.startX = touchStartX;
-  });
-
-  taskList.addEventListener("touchmove", (e) => {
-    const li = e.target.closest(".task-item");
-    if (!li) return;
-    const moveX = e.touches[0].clientX - li.dataset.startX;
-    li.style.transform = `translateX(${moveX}px)`;
-  });
-
-  taskList.addEventListener("touchend", (e) => {
-    const li = e.target.closest(".task-item");
-    if (!li) return;
-    const moveX = e.changedTouches[0].clientX - li.dataset.startX;
-
-    if (moveX < -100) {
-      deleteTask(Number(li.dataset.id));
-    } else {
-      li.style.transform = "translateX(0)";
-    }
-  });
-
-  // ===== VIEW TOGGLE =====
-  viewBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      viewBtns.forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      currentView = btn.dataset.view;
-      if (currentView === "list") {
-        listView.classList.remove("hidden");
-        calendarView.classList.add("hidden");
-      } else {
-        listView.classList.add("hidden");
-        calendarView.classList.remove("hidden");
-        renderCalendar();
-      }
-    });
-  });
-
-  // ===== RENDER CALENDAR =====
+  // ===== CALENDAR =====
   function renderCalendar() {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
@@ -286,11 +291,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const startDay = firstDay.getDay(); // 0 = Minggu
     const totalDays = lastDay.getDate();
 
-    // Tampilkan bulan dan tahun
-    currentMonthSpan.textContent = currentMonth.toLocaleDateString("id-ID", {
-      month: "long",
-      year: "numeric",
-    });
+    // Nama bulan
+    currentMonthSpan.textContent = currentMonth.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 
     let gridHTML = "";
 
@@ -298,46 +300,33 @@ document.addEventListener("DOMContentLoaded", () => {
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = startDay; i > 0; i--) {
       const day = prevMonthLastDay - i + 1;
-      const dateStr = `${year}-${month}-${day}`; // format YYYY-MM-DD, tapi bulan masih 0-index
-      // Untuk data-date, kita buat format YYYY-MM-DD dengan bulan 1-index
-      const monthPrev = month; // bulan sebelumnya (masih 0-index)
-      const yearPrev = month === 0 ? year - 1 : year;
-      const monthPrevCorrect = month === 0 ? 11 : month - 1;
-      const dateStrCorrect = `${yearPrev}-${String(monthPrevCorrect + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      gridHTML += `<div class="calendar-day other-month" data-date="${dateStrCorrect}">${day}</div>`;
+      const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      gridHTML += `<div class="calendar-day other-month" data-date="${dateStr}">${day}</div>`;
     }
 
     // Hari bulan ini
     for (let d = 1; d <= totalDays; d++) {
       const date = new Date(year, month, d);
-      const hasTask = tasks.some((task) => {
+      const hasTask = tasks.some(task => {
         const taskDate = new Date(task.date);
-        return (
-          taskDate.getFullYear() === year &&
-          taskDate.getMonth() === month &&
-          taskDate.getDate() === d
-        );
+        return taskDate.getFullYear() === year && taskDate.getMonth() === month && taskDate.getDate() === d;
       });
       const className = `calendar-day ${hasTask ? "has-task" : ""}`;
       const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       gridHTML += `<div class="${className}" data-date="${dateStr}">${d}</div>`;
     }
 
-    // Hari bulan depan untuk memenuhi 42 sel (6 baris x 7 hari)
+    // Hari bulan depan untuk memenuhi 42 sel
     const nextDays = 42 - (startDay + totalDays);
     for (let i = 1; i <= nextDays; i++) {
-      const day = i;
-      const monthNext = month + 1;
-      const yearNext = monthNext === 12 ? year + 1 : year;
-      const monthNextCorrect = monthNext === 12 ? 0 : monthNext;
-      const dateStr = `${yearNext}-${String(monthNextCorrect + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      gridHTML += `<div class="calendar-day other-month" data-date="${dateStr}">${day}</div>`;
+      const dateStr = `${year}-${String(month + 2).padStart(2, "0")}-${String(i).padStart(2, "0")}`;
+      gridHTML += `<div class="calendar-day other-month" data-date="${dateStr}">${i}</div>`;
     }
 
     calendarGrid.innerHTML = gridHTML;
 
-    // Tambahkan event listener untuk setiap hari
-    document.querySelectorAll(".calendar-day").forEach((day) => {
+    // Tambahkan event listener ke setiap hari
+    document.querySelectorAll(".calendar-day").forEach(day => {
       day.addEventListener("click", () => {
         const dateStr = day.dataset.date;
         if (!dateStr) return;
@@ -345,25 +334,25 @@ document.addEventListener("DOMContentLoaded", () => {
         const selectedDate = new Date(y, m - 1, d);
 
         // Filter task pada tanggal tersebut
-        const tasksOnDate = tasks.filter((task) => {
+        const tasksOnDate = tasks.filter(task => {
           const taskDate = new Date(task.date);
-          return (
-            taskDate.getFullYear() === y &&
-            taskDate.getMonth() === m - 1 &&
-            taskDate.getDate() === d
-          );
+          return taskDate.getFullYear() === y && taskDate.getMonth() === m - 1 && taskDate.getDate() === d;
         });
 
-        // Tampilkan di area bawah
-        selectedDateSpan.textContent = selectedDate.toLocaleDateString("id-ID");
-        taskListDate.innerHTML = tasksOnDate
-          .map(
-            (task) => `<li>${task.text} <small>(${task.category})</small></li>`,
-          )
-          .join("");
+        selectedDateSpan.textContent = selectedDate.toLocaleDateString("id-ID", {
+          weekday: "long", year: "numeric", month: "long", day: "numeric"
+        });
 
-        // Jika tidak ada task
-        if (tasksOnDate.length === 0) {
+        if (tasksOnDate.length > 0) {
+          taskListDate.innerHTML = tasksOnDate.map(task => `
+            <li>
+              <span>
+                <strong>${task.text}</strong> <small>(${task.category})</small>
+              </span>
+              <small>${task.done ? "✅ Selesai" : "⏳ Belum"}</small>
+            </li>
+          `).join("");
+        } else {
           taskListDate.innerHTML = "<li>Tidak ada task pada tanggal ini</li>";
         }
       });
@@ -375,13 +364,40 @@ document.addEventListener("DOMContentLoaded", () => {
     currentMonth.setMonth(currentMonth.getMonth() - 1);
     renderCalendar();
   });
-
   nextMonthBtn.addEventListener("click", () => {
     currentMonth.setMonth(currentMonth.getMonth() + 1);
     renderCalendar();
   });
 
-  // Inisialisasi: pastikan list-view aktif, calendar-view tersembunyi
+  // ===== SWIPE DELETE (mobile) =====
+  let touchStartX = 0;
+  taskList.addEventListener("touchstart", (e) => {
+    const li = e.target.closest(".task-item");
+    if (!li) return;
+    touchStartX = e.touches[0].clientX;
+    li.dataset.startX = touchStartX;
+  });
+  taskList.addEventListener("touchmove", (e) => {
+    const li = e.target.closest(".task-item");
+    if (!li) return;
+    const moveX = e.touches[0].clientX - li.dataset.startX;
+    li.style.transform = `translateX(${moveX}px)`;
+  });
+  taskList.addEventListener("touchend", (e) => {
+    const li = e.target.closest(".task-item");
+    if (!li) return;
+    const moveX = e.changedTouches[0].clientX - li.dataset.startX;
+    if (moveX < -100) {
+      deleteTask(Number(li.dataset.id));
+    } else {
+      li.style.transform = "translateX(0)";
+    }
+  });
+
+  // Inisialisasi tampilan awal
   listView.classList.remove("hidden");
   calendarView.classList.add("hidden");
+  // Set tanggal minimum di input date ke hari ini
+  const today = new Date().toISOString().split("T")[0];
+  dateInput.min = today;
 });
