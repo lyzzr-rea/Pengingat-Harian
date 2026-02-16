@@ -1,8 +1,8 @@
 // === PWA Service Worker ===
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js")
-    .then(reg => console.log("Service Worker registered", reg))
-    .catch(err => console.error("Service Worker registration failed", err));
+    .then(reg => console.log("SW registered:", reg))
+    .catch(err => console.error("SW registration failed:", err));
 }
 
 // Request izin notifikasi saat halaman dimuat
@@ -401,3 +401,4 @@ document.addEventListener("DOMContentLoaded", () => {
   const today = new Date().toISOString().split("T")[0];
   dateInput.min = today;
 });
+
