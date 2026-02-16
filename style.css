@@ -114,6 +114,28 @@ body {
   gap: 8px;
 }
 
+/* === PERBAIKAN RESPONSIF UNTUK HP === */
+.add-task input,
+.add-task select {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 16px; /* cegah zoom di iOS */
+  padding: 12px;
+}
+
+input[type="date"] {
+  min-height: 48px; /* area sentuh lebih besar */
+}
+
+.time-inputs {
+  width: 100%;
+}
+
+.time-inputs input {
+  flex: 1;
+  min-width: 0;
+}
+
 .time-inputs input {
   flex: 1;
 }
@@ -328,3 +350,4 @@ body.dark #task-list-date li {
 .hidden {
   display: none !important;
 }
+
