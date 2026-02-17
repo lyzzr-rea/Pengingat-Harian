@@ -32,10 +32,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const closeStats = document.getElementById("close-stats");
   const statsBody = document.getElementById("stats-body");
 
+  // Snooze elements
+  const snoozeModal = document.getElementById("snooze-modal");
+  const closeSnooze = document.getElementById("close-snooze");
+  const snoozeTaskText = document.getElementById("snooze-task-text");
+  const snoozeOptions = document.querySelectorAll(".snooze-options button");
+
   let currentFilter = "All";
   let tasks = [];
   let currentView = "list";
   let currentMonth = new Date();
+  let snoozeTaskId = null;
 
   // 🔓 Unlock audio on first click
   document.addEventListener(
@@ -82,6 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   loadTasks();
+  tasks.forEach(task => startTimer(task));
   renderTasks();
 
   // ===== FILTER =====
@@ -111,19 +119,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (timeDiff <= 0) return alert("Waktu harus di masa depan!");
 
     const task = {
-      id: Date.now(),
+      id: Date.now().toString(),
       text: taskText,
       category: categoryInput.value,
       date: reminderDate,
-      time: timeDiff,
-      timeoutId: null,
       done: false,
+      timeoutId: null
     };
 
     tasks.push(task);
     saveTasks();
-    renderTasks();
     startTimer(task);
+    renderTasks();
 
     taskInput.value = "";
     dateInput.value = "";
@@ -153,7 +160,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       li.innerHTML = `
         <span>
-          <input type="checkbox" ${task.done ? "checked" : ""} onchange="toggleDone(${task.id})">
+          <input type="checkbox" ${task.done ? "checked" : ""} onchange="toggleDone('${task.id}')">
           <strong>${task.text}</strong>
           <small>
             <span class="badge ${task.category}">${task.category}</span>
@@ -161,8 +168,8 @@ document.addEventListener("DOMContentLoaded", () => {
           </small>
         </span>
         <div class="actions">
-          <button onclick="editTask(${task.id})">Edit</button>
-          <button onclick="deleteTask(${task.id})">Delete</button>
+          <button onclick="editTask('${task.id}')">Edit</button>
+          <button onclick="deleteTask('${task.id}')">Delete</button>
         </div>
       `;
 
@@ -170,22 +177,76 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ===== TIMER + BACKGROUND NOTIFICATION =====
+  // ===== TIMER + NOTIFICATION + SNOOZE =====
   function startTimer(task) {
+    if (task.done) return;
+    const now = Date.now();
+    const taskTime = task.date.getTime();
+    const delay = taskTime - now;
+    if (delay <= 0) {
+      showNotification(task);
+      return;
+    }
     task.timeoutId = setTimeout(() => {
-      if (Notification.permission === "granted") {
-        navigator.serviceWorker.ready.then((reg) => {
-          reg.showNotification("Task Reminder", {
-            body: task.text,
-            icon: "icon-192.png",
-            badge: "icon-192.png",
-          });
-        });
-      }
-
-      deleteTask(task.id);
-    }, task.time);
+      showNotification(task);
+    }, delay);
   }
+
+  function showNotification(task) {
+    if (Notification.permission === "granted") {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.showNotification("Task Reminder", {
+          body: task.text,
+          icon: "icon-192.png",
+          badge: "icon-192.png",
+          tag: task.id,
+          data: { taskId: task.id }
+        });
+      });
+    } else {
+      alert(`Pengingat: ${task.text}`);
+    }
+    snoozeTaskId = task.id;
+    snoozeTaskText.textContent = task.text;
+    snoozeModal.classList.remove("hidden");
+  }
+
+  // ===== SNOOZE HANDLER =====
+  snoozeOptions.forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const minutes = parseInt(e.target.dataset.minutes);
+      if (!snoozeTaskId) return;
+      const task = tasks.find(t => t.id === snoozeTaskId);
+      if (!task) return;
+
+      clearTimeout(task.timeoutId);
+      const newDate = new Date(task.date.getTime() + minutes * 60000);
+      task.date = newDate;
+      saveTasks();
+      startTimer(task);
+      snoozeModal.classList.add("hidden");
+      snoozeTaskId = null;
+      renderTasks();
+      if (currentView === "calendar") renderCalendar();
+    });
+  });
+
+  closeSnooze.addEventListener("click", () => {
+    snoozeModal.classList.add("hidden");
+    snoozeTaskId = null;
+  });
+
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    if (event.data.type === "SNOOZE") {
+      const taskId = event.data.taskId;
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        snoozeTaskId = taskId;
+        snoozeTaskText.textContent = task.text;
+        snoozeModal.classList.remove("hidden");
+      }
+    }
+  });
 
   // ===== DELETE + SOUND =====
   window.deleteTask = (id) => {
@@ -259,7 +320,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const moveX = e.changedTouches[0].clientX - li.dataset.startX;
 
     if (moveX < -100) {
-      deleteTask(Number(li.dataset.id));
+      deleteTask(li.dataset.id);
     } else {
       li.style.transform = "translateX(0)";
     }
@@ -302,16 +363,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = startDay; i > 0; i--) {
       const day = prevMonthLastDay - i + 1;
-      const monthPrev = month;
       const yearPrev = month === 0 ? year - 1 : year;
-      const monthPrevCorrect = month === 0 ? 11 : month - 1;
-      const dateStrCorrect = `${yearPrev}-${String(monthPrevCorrect + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      gridHTML += `<div class="calendar-day other-month" data-date="${dateStrCorrect}">${day}</div>`;
+      const monthPrev = month === 0 ? 11 : month - 1;
+      const dateStr = `${yearPrev}-${String(monthPrev + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      gridHTML += `<div class="calendar-day other-month" data-date="${dateStr}">${day}</div>`;
     }
 
     // Hari bulan ini
     for (let d = 1; d <= totalDays; d++) {
-      const date = new Date(year, month, d);
       const hasTask = tasks.some((task) => {
         const taskDate = new Date(task.date);
         return (
@@ -329,10 +388,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const nextDays = 42 - (startDay + totalDays);
     for (let i = 1; i <= nextDays; i++) {
       const day = i;
-      const monthNext = month + 1;
-      const yearNext = monthNext === 12 ? year + 1 : year;
-      const monthNextCorrect = monthNext === 12 ? 0 : monthNext;
-      const dateStr = `${yearNext}-${String(monthNextCorrect + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const yearNext = month === 11 ? year + 1 : year;
+      const monthNext = month === 11 ? 0 : month + 1;
+      const dateStr = `${yearNext}-${String(monthNext + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       gridHTML += `<div class="calendar-day other-month" data-date="${dateStr}">${day}</div>`;
     }
 
@@ -381,11 +439,10 @@ document.addEventListener("DOMContentLoaded", () => {
   listView.classList.remove("hidden");
   calendarView.classList.add("hidden");
 
-  // ===== STATISTIK / RINGKASAN =====
+  // ===== STATISTIK =====
   function calculateStats() {
     const total = tasks.length;
     const completed = tasks.filter(t => t.done).length;
-    const incomplete = total - completed;
     
     const categories = ['Tugas', 'Personal', 'Acara', 'Janjian'];
     const categoryCount = {};
@@ -412,7 +469,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return d.getTime() === tomorrow.getTime();
     }).length;
 
-    return { total, completed, incomplete, categoryCount, categoryCompleted, todayTasks, tomorrowTasks };
+    return { total, completed, categoryCount, categoryCompleted, todayTasks, tomorrowTasks };
   }
 
   function renderStats() {
@@ -479,190 +536,56 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target === statsModal) {
       statsModal.classList.add("hidden");
     }
+    if (e.target === snoozeModal) {
+      snoozeModal.classList.add("hidden");
+      snoozeTaskId = null;
+    }
   });
 
-  // ===== VOICE INPUT DEEP PARSING =====
-  function parseAdvanced(transcript) {
-    const lower = transcript.toLowerCase();
-    const now = new Date();
-    let targetDate = null;
-    let hours = null;
-    let minutes = 0;
-    let seconds = 0;
-    let detectedCategory = null;
-
-    // 1. Deteksi kategori
-    const categoryKeywords = {
-      Tugas: ['tugas', 'pr', 'belajar', 'ujian', 'kuis', 'mengerjakan'],
-      Personal: ['pribadi', 'olahraga', 'gym', 'meditasi', 'baca', 'tidur'],
-      Acara: ['acara', 'event', 'konser', 'pesta', 'ulang tahun', 'pernikahan'],
-      Janjian: ['janji', 'janjian', 'ketemu', 'meeting', 'temu', 'kopdar', 'date']
-    };
-
-    for (const [cat, keywords] of Object.entries(categoryKeywords)) {
-      if (keywords.some(kw => lower.includes(kw))) {
-        detectedCategory = cat;
-        break;
-      }
-    }
-
-    // 2. Deteksi tanggal
-    if (lower.includes('besok')) {
-      targetDate = new Date(now);
-      targetDate.setDate(now.getDate() + 1);
-    } else if (lower.includes('lusa')) {
-      targetDate = new Date(now);
-      targetDate.setDate(now.getDate() + 2);
-    } else if (lower.includes('hari ini')) {
-      targetDate = new Date(now);
-    } else {
-      const days = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
-      for (let i = 0; i < days.length; i++) {
-        if (lower.includes(days[i])) {
-          const targetDay = i;
-          const currentDay = now.getDay();
-          let diff = targetDay - currentDay;
-          if (diff <= 0) diff += 7;
-          targetDate = new Date(now);
-          targetDate.setDate(now.getDate() + diff);
-          break;
-        }
-      }
-      if (!targetDate) {
-        const monthMap = {
-          januari:0, februari:1, maret:2, april:3, mei:4, juni:5,
-          juli:6, agustus:7, september:8, oktober:9, november:10, desember:11
-        };
-        const dateMatch = lower.match(/(\d{1,2})\s*(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)/i);
-        if (dateMatch) {
-          const day = parseInt(dateMatch[1]);
-          const month = monthMap[dateMatch[2].toLowerCase()];
-          targetDate = new Date(now.getFullYear(), month, day);
-          if (targetDate < now) targetDate.setFullYear(now.getFullYear() + 1);
-        }
-      }
-    }
-    if (!targetDate) targetDate = new Date(now);
-
-    // 3. Deteksi waktu
-    const timePatterns = [
-      { regex: /(?:jam|pukul)?\s*setengah\s*(\d{1,2})/i, handler: (matches) => {
-          let h = parseInt(matches[1]) - 1;
-          return { h, m: 30 };
-      }},
-      { regex: /(?:jam|pukul)?\s*(\d{1,2})\s*lewat\s*(\d{1,2})/i, handler: (matches) => {
-          return { h: parseInt(matches[1]), m: parseInt(matches[2]) };
-      }},
-      { regex: /(?:jam|pukul)?\s*(\d{1,2})\s*kurang\s*(\d{1,2})/i, handler: (matches) => {
-          let h = parseInt(matches[1]) - 1;
-          let m = 60 - parseInt(matches[2]);
-          return { h, m };
-      }},
-      { regex: /(?:jam|pukul)?\s*(\d{1,2})(?:\s*(\d{1,2}))?\s*(pagi|siang|sore|malam)?/i, handler: (matches) => {
-          let h = parseInt(matches[1]);
-          let m = matches[2] ? parseInt(matches[2]) : 0;
-          const modifier = matches[3] ? matches[3].toLowerCase() : '';
-          if (modifier === 'pagi' && h === 12) h = 0;
-          else if ((modifier === 'siang' || modifier === 'sore' || modifier === 'malam') && h < 12) h += 12;
-          return { h, m };
-      }},
-      { regex: /(\d{1,2})\s*(pagi|siang|sore|malam)/i, handler: (matches) => {
-          let h = parseInt(matches[1]);
-          const modifier = matches[2].toLowerCase();
-          if (modifier === 'pagi' && h === 12) h = 0;
-          else if (modifier !== 'pagi' && h < 12) h += 12;
-          return { h, m: 0 };
-      }}
-    ];
-
-    for (let pattern of timePatterns) {
-      const match = lower.match(pattern.regex);
-      if (match) {
-        const result = pattern.handler(match);
-        hours = result.h;
-        minutes = result.m;
-        break;
-      }
-    }
-
-    return {
-      text: transcript,
-      category: detectedCategory,
-      date: targetDate,
-      hours: hours,
-      minutes: minutes,
-      seconds: 0
-    };
-  }
-
+  // ===== VOICE INPUT =====
   const voiceBtn = document.getElementById("voice-btn");
-  let recognition = null;
-  let isListening = false;
 
   if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SpeechRecognition();
+    const recognition = new SpeechRecognition();
     recognition.lang = "id-ID";
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
-      isListening = true;
       voiceBtn.classList.add("listening");
       voiceBtn.textContent = "⏹️";
     };
 
     recognition.onend = () => {
-      isListening = false;
       voiceBtn.classList.remove("listening");
       voiceBtn.textContent = "🎤";
     };
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
-      const parsed = parseAdvanced(transcript);
-      
-      taskInput.value = parsed.text;
-      
-      if (parsed.category) {
-        const options = Array.from(categoryInput.options);
-        const option = options.find(opt => opt.value === parsed.category);
-        if (option) categoryInput.value = parsed.category;
-      }
-      
-      if (parsed.date) {
-        const year = parsed.date.getFullYear();
-        const month = String(parsed.date.getMonth() + 1).padStart(2, '0');
-        const day = String(parsed.date.getDate()).padStart(2, '0');
-        dateInput.value = `${year}-${month}-${day}`;
-      }
-      
-      if (parsed.hours !== null) hoursInput.value = parsed.hours;
-      if (parsed.minutes !== null) minutesInput.value = parsed.minutes;
-      secondsInput.value = 0;
+      taskInput.value = transcript;
     };
 
     recognition.onerror = (event) => {
-      console.error("Speech recognition error", event.error);
-      alert("Gagal mengenali suara: " + event.error);
+      console.error("Speech error", event.error);
+      alert("Gagal mengenali suara");
       recognition.stop();
     };
 
     voiceBtn.addEventListener("click", () => {
-      if (isListening) {
+      if (voiceBtn.classList.contains("listening")) {
         recognition.stop();
       } else {
         try {
           recognition.start();
         } catch (e) {
-          alert("Tidak dapat mengakses mikrofon. Pastikan izin diberikan.");
+          alert("Akses mikrofon ditolak");
         }
       }
     });
   } else {
     voiceBtn.disabled = true;
     voiceBtn.title = "Browser tidak mendukung input suara";
-    voiceBtn.style.opacity = 0.5;
   }
 });
