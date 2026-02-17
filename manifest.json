@@ -1,5 +1,5 @@
 {
-  "name": "Task Reminder App",
+  "name": "Task Reminder",
   "short_name": "Reminders",
   "start_url": ".",
   "display": "standalone",
