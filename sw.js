@@ -1,4 +1,4 @@
-const CACHE_NAME = "task-reminder-snooze-v1";
+const CACHE_NAME = "task-reminder-v1";
 const urlsToCache = ["./", "./index.html", "./style.css", "./script.js"];
 
 self.addEventListener("install", (e) => {
@@ -34,3 +34,4 @@ self.addEventListener("push", (e) => {
     data: { taskId: data.taskId }
   });
 });
+
