@@ -26,10 +26,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const selectedDateSpan = document.getElementById("selected-date");
   const taskListDate = document.getElementById("task-list-date");
 
+  // Statistik elements
+  const statsBtn = document.getElementById("stats-btn");
+  const statsModal = document.getElementById("stats-modal");
+  const closeStats = document.getElementById("close-stats");
+  const statsBody = document.getElementById("stats-body");
+
   let currentFilter = "All";
   let tasks = [];
-  let currentView = "list"; // 'list' atau 'calendar'
-  let currentMonth = new Date(); // bulan yang ditampilkan di kalender
+  let currentView = "list";
+  let currentMonth = new Date();
 
   // 🔓 Unlock audio on first click
   document.addEventListener(
@@ -125,7 +131,6 @@ document.addEventListener("DOMContentLoaded", () => {
     minutesInput.value = "";
     secondsInput.value = "";
 
-    // Jika sedang di kalender, render ulang
     if (currentView === "calendar") {
       renderCalendar();
     }
@@ -286,7 +291,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const startDay = firstDay.getDay(); // 0 = Minggu
     const totalDays = lastDay.getDate();
 
-    // Tampilkan bulan dan tahun
     currentMonthSpan.textContent = currentMonth.toLocaleDateString("id-ID", {
       month: "long",
       year: "numeric",
@@ -298,9 +302,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = startDay; i > 0; i--) {
       const day = prevMonthLastDay - i + 1;
-      const dateStr = `${year}-${month}-${day}`; // format YYYY-MM-DD, tapi bulan masih 0-index
-      // Untuk data-date, kita buat format YYYY-MM-DD dengan bulan 1-index
-      const monthPrev = month; // bulan sebelumnya (masih 0-index)
+      const monthPrev = month;
       const yearPrev = month === 0 ? year - 1 : year;
       const monthPrevCorrect = month === 0 ? 11 : month - 1;
       const dateStrCorrect = `${yearPrev}-${String(monthPrevCorrect + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -323,7 +325,7 @@ document.addEventListener("DOMContentLoaded", () => {
       gridHTML += `<div class="${className}" data-date="${dateStr}">${d}</div>`;
     }
 
-    // Hari bulan depan untuk memenuhi 42 sel (6 baris x 7 hari)
+    // Hari bulan depan
     const nextDays = 42 - (startDay + totalDays);
     for (let i = 1; i <= nextDays; i++) {
       const day = i;
@@ -336,7 +338,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     calendarGrid.innerHTML = gridHTML;
 
-    // Tambahkan event listener untuk setiap hari
     document.querySelectorAll(".calendar-day").forEach((day) => {
       day.addEventListener("click", () => {
         const dateStr = day.dataset.date;
@@ -344,7 +345,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const [y, m, d] = dateStr.split("-").map(Number);
         const selectedDate = new Date(y, m - 1, d);
 
-        // Filter task pada tanggal tersebut
         const tasksOnDate = tasks.filter((task) => {
           const taskDate = new Date(task.date);
           return (
@@ -354,7 +354,6 @@ document.addEventListener("DOMContentLoaded", () => {
           );
         });
 
-        // Tampilkan di area bawah
         selectedDateSpan.textContent = selectedDate.toLocaleDateString("id-ID");
         taskListDate.innerHTML = tasksOnDate
           .map(
@@ -362,7 +361,6 @@ document.addEventListener("DOMContentLoaded", () => {
           )
           .join("");
 
-        // Jika tidak ada task
         if (tasksOnDate.length === 0) {
           taskListDate.innerHTML = "<li>Tidak ada task pada tanggal ini</li>";
         }
@@ -370,7 +368,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Navigasi bulan
   prevMonthBtn.addEventListener("click", () => {
     currentMonth.setMonth(currentMonth.getMonth() - 1);
     renderCalendar();
@@ -381,7 +378,291 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCalendar();
   });
 
-  // Inisialisasi: pastikan list-view aktif, calendar-view tersembunyi
   listView.classList.remove("hidden");
   calendarView.classList.add("hidden");
+
+  // ===== STATISTIK / RINGKASAN =====
+  function calculateStats() {
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.done).length;
+    const incomplete = total - completed;
+    
+    const categories = ['Tugas', 'Personal', 'Acara', 'Janjian'];
+    const categoryCount = {};
+    const categoryCompleted = {};
+    categories.forEach(cat => {
+      categoryCount[cat] = tasks.filter(t => t.category === cat).length;
+      categoryCompleted[cat] = tasks.filter(t => t.category === cat && t.done).length;
+    });
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const todayTasks = tasks.filter(t => {
+      const d = new Date(t.date);
+      d.setHours(0,0,0,0);
+      return d.getTime() === today.getTime();
+    }).length;
+    
+    const tomorrowTasks = tasks.filter(t => {
+      const d = new Date(t.date);
+      d.setHours(0,0,0,0);
+      return d.getTime() === tomorrow.getTime();
+    }).length;
+
+    return { total, completed, incomplete, categoryCount, categoryCompleted, todayTasks, tomorrowTasks };
+  }
+
+  function renderStats() {
+    const stats = calculateStats();
+    
+    let html = `
+      <div class="stat-total">
+        Total Tugas: ${stats.total}
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">
+          <span>Progress</span>
+          <span>${stats.completed} / ${stats.total} (${stats.total ? Math.round(stats.completed/stats.total*100) : 0}%)</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: ${stats.total ? (stats.completed/stats.total*100) : 0}%"></div>
+        </div>
+      </div>
+      <h4>Per Kategori</h4>
+    `;
+    
+    const categories = ['Tugas', 'Personal', 'Acara', 'Janjian'];
+    categories.forEach(cat => {
+      const totalCat = stats.categoryCount[cat] || 0;
+      const doneCat = stats.categoryCompleted[cat] || 0;
+      const percentage = totalCat ? Math.round(doneCat/totalCat*100) : 0;
+      
+      html += `
+        <div class="stat-row">
+          <span>
+            <span class="stat-badge ${cat}">${cat}</span>
+            ${totalCat} tugas
+          </span>
+          <span>${doneCat} selesai (${percentage}%)</span>
+        </div>
+      `;
+    });
+    
+    html += `
+      <h4>Ringkasan Waktu</h4>
+      <div class="stat-row">
+        <span>📅 Hari ini</span>
+        <span>${stats.todayTasks} tugas</span>
+      </div>
+      <div class="stat-row">
+        <span>📆 Besok</span>
+        <span>${stats.tomorrowTasks} tugas</span>
+      </div>
+    `;
+    
+    statsBody.innerHTML = html;
+  }
+
+  statsBtn.addEventListener("click", () => {
+    renderStats();
+    statsModal.classList.remove("hidden");
+  });
+
+  closeStats.addEventListener("click", () => {
+    statsModal.classList.add("hidden");
+  });
+
+  window.addEventListener("click", (e) => {
+    if (e.target === statsModal) {
+      statsModal.classList.add("hidden");
+    }
+  });
+
+  // ===== VOICE INPUT DEEP PARSING =====
+  function parseAdvanced(transcript) {
+    const lower = transcript.toLowerCase();
+    const now = new Date();
+    let targetDate = null;
+    let hours = null;
+    let minutes = 0;
+    let seconds = 0;
+    let detectedCategory = null;
+
+    // 1. Deteksi kategori
+    const categoryKeywords = {
+      Tugas: ['tugas', 'pr', 'belajar', 'ujian', 'kuis', 'mengerjakan'],
+      Personal: ['pribadi', 'olahraga', 'gym', 'meditasi', 'baca', 'tidur'],
+      Acara: ['acara', 'event', 'konser', 'pesta', 'ulang tahun', 'pernikahan'],
+      Janjian: ['janji', 'janjian', 'ketemu', 'meeting', 'temu', 'kopdar', 'date']
+    };
+
+    for (const [cat, keywords] of Object.entries(categoryKeywords)) {
+      if (keywords.some(kw => lower.includes(kw))) {
+        detectedCategory = cat;
+        break;
+      }
+    }
+
+    // 2. Deteksi tanggal
+    if (lower.includes('besok')) {
+      targetDate = new Date(now);
+      targetDate.setDate(now.getDate() + 1);
+    } else if (lower.includes('lusa')) {
+      targetDate = new Date(now);
+      targetDate.setDate(now.getDate() + 2);
+    } else if (lower.includes('hari ini')) {
+      targetDate = new Date(now);
+    } else {
+      const days = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+      for (let i = 0; i < days.length; i++) {
+        if (lower.includes(days[i])) {
+          const targetDay = i;
+          const currentDay = now.getDay();
+          let diff = targetDay - currentDay;
+          if (diff <= 0) diff += 7;
+          targetDate = new Date(now);
+          targetDate.setDate(now.getDate() + diff);
+          break;
+        }
+      }
+      if (!targetDate) {
+        const monthMap = {
+          januari:0, februari:1, maret:2, april:3, mei:4, juni:5,
+          juli:6, agustus:7, september:8, oktober:9, november:10, desember:11
+        };
+        const dateMatch = lower.match(/(\d{1,2})\s*(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)/i);
+        if (dateMatch) {
+          const day = parseInt(dateMatch[1]);
+          const month = monthMap[dateMatch[2].toLowerCase()];
+          targetDate = new Date(now.getFullYear(), month, day);
+          if (targetDate < now) targetDate.setFullYear(now.getFullYear() + 1);
+        }
+      }
+    }
+    if (!targetDate) targetDate = new Date(now);
+
+    // 3. Deteksi waktu
+    const timePatterns = [
+      { regex: /(?:jam|pukul)?\s*setengah\s*(\d{1,2})/i, handler: (matches) => {
+          let h = parseInt(matches[1]) - 1;
+          return { h, m: 30 };
+      }},
+      { regex: /(?:jam|pukul)?\s*(\d{1,2})\s*lewat\s*(\d{1,2})/i, handler: (matches) => {
+          return { h: parseInt(matches[1]), m: parseInt(matches[2]) };
+      }},
+      { regex: /(?:jam|pukul)?\s*(\d{1,2})\s*kurang\s*(\d{1,2})/i, handler: (matches) => {
+          let h = parseInt(matches[1]) - 1;
+          let m = 60 - parseInt(matches[2]);
+          return { h, m };
+      }},
+      { regex: /(?:jam|pukul)?\s*(\d{1,2})(?:\s*(\d{1,2}))?\s*(pagi|siang|sore|malam)?/i, handler: (matches) => {
+          let h = parseInt(matches[1]);
+          let m = matches[2] ? parseInt(matches[2]) : 0;
+          const modifier = matches[3] ? matches[3].toLowerCase() : '';
+          if (modifier === 'pagi' && h === 12) h = 0;
+          else if ((modifier === 'siang' || modifier === 'sore' || modifier === 'malam') && h < 12) h += 12;
+          return { h, m };
+      }},
+      { regex: /(\d{1,2})\s*(pagi|siang|sore|malam)/i, handler: (matches) => {
+          let h = parseInt(matches[1]);
+          const modifier = matches[2].toLowerCase();
+          if (modifier === 'pagi' && h === 12) h = 0;
+          else if (modifier !== 'pagi' && h < 12) h += 12;
+          return { h, m: 0 };
+      }}
+    ];
+
+    for (let pattern of timePatterns) {
+      const match = lower.match(pattern.regex);
+      if (match) {
+        const result = pattern.handler(match);
+        hours = result.h;
+        minutes = result.m;
+        break;
+      }
+    }
+
+    return {
+      text: transcript,
+      category: detectedCategory,
+      date: targetDate,
+      hours: hours,
+      minutes: minutes,
+      seconds: 0
+    };
+  }
+
+  const voiceBtn = document.getElementById("voice-btn");
+  let recognition = null;
+  let isListening = false;
+
+  if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = "id-ID";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      isListening = true;
+      voiceBtn.classList.add("listening");
+      voiceBtn.textContent = "⏹️";
+    };
+
+    recognition.onend = () => {
+      isListening = false;
+      voiceBtn.classList.remove("listening");
+      voiceBtn.textContent = "🎤";
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      const parsed = parseAdvanced(transcript);
+      
+      taskInput.value = parsed.text;
+      
+      if (parsed.category) {
+        const options = Array.from(categoryInput.options);
+        const option = options.find(opt => opt.value === parsed.category);
+        if (option) categoryInput.value = parsed.category;
+      }
+      
+      if (parsed.date) {
+        const year = parsed.date.getFullYear();
+        const month = String(parsed.date.getMonth() + 1).padStart(2, '0');
+        const day = String(parsed.date.getDate()).padStart(2, '0');
+        dateInput.value = `${year}-${month}-${day}`;
+      }
+      
+      if (parsed.hours !== null) hoursInput.value = parsed.hours;
+      if (parsed.minutes !== null) minutesInput.value = parsed.minutes;
+      secondsInput.value = 0;
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error", event.error);
+      alert("Gagal mengenali suara: " + event.error);
+      recognition.stop();
+    };
+
+    voiceBtn.addEventListener("click", () => {
+      if (isListening) {
+        recognition.stop();
+      } else {
+        try {
+          recognition.start();
+        } catch (e) {
+          alert("Tidak dapat mengakses mikrofon. Pastikan izin diberikan.");
+        }
+      }
+    });
+  } else {
+    voiceBtn.disabled = true;
+    voiceBtn.title = "Browser tidak mendukung input suara";
+    voiceBtn.style.opacity = 0.5;
+  }
 });
