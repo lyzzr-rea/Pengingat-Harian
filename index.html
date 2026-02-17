@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Task Reminder App</title>
+    <title>Task Reminder + Snooze</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" href="icon-192.png" />
@@ -46,27 +46,9 @@
         </select>
         <input type="date" id="date-input" />
         <div class="time-inputs">
-          <input
-            type="number"
-            id="hours-input"
-            placeholder="HH"
-            min="0"
-            max="23"
-          />
-          <input
-            type="number"
-            id="minutes-input"
-            placeholder="MM"
-            min="0"
-            max="59"
-          />
-          <input
-            type="number"
-            id="seconds-input"
-            placeholder="SS"
-            min="0"
-            max="59"
-          />
+          <input type="number" id="hours-input" placeholder="HH" min="0" max="23" />
+          <input type="number" id="minutes-input" placeholder="MM" min="0" max="59" />
+          <input type="number" id="seconds-input" placeholder="SS" min="0" max="59" />
         </div>
         <button id="add-btn">Add</button>
       </div>
@@ -76,16 +58,14 @@
         <ul id="task-list" class="task-list"></ul>
       </div>
 
-      <!-- Calendar View (hidden by default) -->
+      <!-- Calendar View -->
       <div id="calendar-view" class="calendar-view hidden">
         <div class="calendar-header">
           <button id="prev-month">&lt;</button>
           <span id="current-month"></span>
           <button id="next-month">&gt;</button>
         </div>
-        <div class="calendar-grid" id="calendar-grid">
-          <!-- Hari-hari diisi oleh JavaScript -->
-        </div>
+        <div class="calendar-grid" id="calendar-grid"></div>
         <div class="selected-date-tasks">
           <h4>Tasks on <span id="selected-date"></span></h4>
           <ul id="task-list-date"></ul>
@@ -99,17 +79,31 @@
             <h3>Statistik & Ringkasan</h3>
             <button id="close-stats">&times;</button>
           </div>
-          <div class="modal-body" id="stats-body">
-            <!-- Diisi oleh JavaScript -->
+          <div class="modal-body" id="stats-body"></div>
+        </div>
+      </div>
+
+      <!-- Modal Snooze -->
+      <div id="snooze-modal" class="modal hidden">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Tunda Pengingat</h3>
+            <button id="close-snooze">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p id="snooze-task-text"></p>
+            <div class="snooze-options">
+              <button data-minutes="5">5 menit</button>
+              <button data-minutes="10">10 menit</button>
+              <button data-minutes="30">30 menit</button>
+              <button data-minutes="60">1 jam</button>
+            </div>
           </div>
         </div>
       </div>
 
       <audio id="delete-sound" preload="auto">
-        <source
-          src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA="
-          type="audio/wav"
-        />
+        <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=" type="audio/wav" />
       </audio>
       <audio id="alarm-sound" src="alarm.mp3"></audio>
     </div>
