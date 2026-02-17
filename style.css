@@ -135,15 +135,43 @@ body {
   100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
 }
 
+/* ===== OUTLINE INPUT ===== */
 .add-task input,
-.add-task select {
+.add-task select,
+.time-inputs input {
+  border: 1px solid #333;         /* outline gelap untuk tema terang */
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
   padding: 10px;
   border-radius: 10px;
-  border: none;
   font-size: 14px;
   width: 100%;
   box-sizing: border-box;
 }
+
+.add-task input:focus,
+.add-task select:focus,
+.time-inputs input:focus {
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+}
+
+/* Dark mode: outline terang */
+body.dark .add-task input,
+body.dark .add-task select,
+body.dark .time-inputs input {
+  border-color: #aaa;            /* outline terang untuk dark mode */
+  background-color: #2c2c2e;
+  color: white;
+}
+
+body.dark .add-task input:focus,
+body.dark .add-task select:focus,
+body.dark .time-inputs input:focus {
+  border-color: #0a84ff;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.3);
+}
+/* ========================= */
 
 .time-inputs {
   display: flex;
@@ -325,11 +353,6 @@ body.dark .task-item {
   background: #2c2c2e;
   color: white;
 }
-body.dark input,
-body.dark select {
-  background: #2c2c2e;
-  color: white;
-}
 body.dark .calendar-day {
   background: #2c2c2e;
   color: white;
@@ -344,6 +367,7 @@ body.dark .calendar-day.other-month {
 body.dark #task-list-date li {
   background: #2c2c2e;
   color: white;
+  border-left-color: #0a84ff;
 }
 
 /* Hover interaktif */
@@ -358,7 +382,7 @@ body.dark #task-list-date li {
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
 }
 
-/* Modal Statistik */
+/* Modal Statistik dan Snooze */
 .modal {
   position: fixed;
   top: 0;
@@ -392,7 +416,7 @@ body.dark .modal-content {
 .modal-header h3 {
   margin: 0;
 }
-#close-stats {
+#close-stats, #close-snooze {
   background: none;
   border: none;
   font-size: 24px;
@@ -403,6 +427,8 @@ body.dark .modal-content {
   max-height: 70vh;
   overflow-y: auto;
 }
+
+/* Statistik */
 .stat-item {
   margin-bottom: 15px;
 }
@@ -447,6 +473,35 @@ body.dark .stat-row {
   font-weight: 600;
   text-align: center;
   margin-bottom: 15px;
+}
+
+/* Snooze */
+.snooze-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+  justify-content: center;
+}
+.snooze-options button {
+  flex: 1 0 40%;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: #007aff;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.snooze-options button:hover {
+  transform: scale(1.05);
+  background: #005fcc;
+}
+#snooze-task-text {
+  font-weight: 500;
+  text-align: center;
+  margin-bottom: 10px;
 }
 
 /* Utility */
