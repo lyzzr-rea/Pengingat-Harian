@@ -1,0 +1,883 @@
+/* =========================================
+   GLOBAL
+========================================= */
+
+* {
+  box-sizing: border-box;
+}
+html {
+  width: 100%;
+  min-height: 100%;
+}
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background: linear-gradient(135deg, #1f1c2c, #928dab);
+  margin: 0;
+  width: 100%;
+  min-height: 100vh;
+  color: #1c1c1e;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease;
+}
+
+/* =========================================
+   FULLSCREEN APPLICATION
+========================================= */
+
+.app {
+  width: 100%;
+  min-height: 100vh;
+  padding: 24px 24px calc(120px + env(safe-area-inset-bottom));
+  background: #f2f2f7;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease;
+}
+
+/* =========================================
+   HEADER
+========================================= */
+
+.app-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.header-title h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+.header-title p {
+  margin: 4px 0 0;
+  color: #8e8e93;
+  font-size: 14px;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.header-btn {
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: #e5e5ea;
+  font-size: 18px;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+.header-btn:hover {
+  transform: scale(1.08);
+}
+
+/* =========================================
+   VIEW TOGGLE
+========================================= */
+
+.view-toggle {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  max-width: 600px;
+}
+.view-btn {
+  flex: 1;
+  padding: 11px;
+  border: none;
+  border-radius: 20px;
+  background: #e5e5ea;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.view-btn:hover {
+  transform: translateY(-2px);
+}
+.view-btn.active {
+  background: #007aff;
+  color: white;
+}
+
+/* =========================================
+   FILTERS
+========================================= */
+
+.filters {
+  display: flex;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 0px;
+  overflow: hidden;
+}
+.filters::-webkit-scrollbar {
+  display: none;
+}
+.filter-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  width: 0;
+  background: #e5e5ea;
+  border: none;
+  padding: 9px 6px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.filter-btn:hover {
+  transform: translateY(-2px);
+}
+.filter-btn.active {
+  color: white;
+}
+.filter-btn.active[data-filter="Tugas"] {
+  background: #007aff;
+}
+.filter-btn.active[data-filter="Personal"] {
+  background: #34c759;
+}
+.filter-btn.active[data-filter="Acara"] {
+  background: #ff9500;
+}
+.filter-btn.active[data-filter="Janjian"] {
+  background: #af52de;
+}
+.filter-btn.active[data-filter="All"] {
+  background: #1c1c1e;
+  color: white;
+}
+
+/* =========================================
+   ADD TASK
+========================================= */
+
+.add-task {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 25px;
+  padding: 20px;
+  background: white;
+  border-radius: 18px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+}
+.input-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.add-task input,
+.add-task select,
+.time-inputs input {
+  border: 1px solid #c7c7cc;
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  padding: 11px;
+  border-radius: 10px;
+  font-size: 14px;
+  width: 100%;
+  background: white;
+  color: #1c1c1e;
+}
+.add-task input:focus,
+.add-task select:focus,
+.time-inputs input:focus {
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
+}
+.input-row input {
+  flex: 1;
+}
+.time-inputs {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.time-inputs input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* =========================================
+   VOICE BUTTON
+========================================= */
+
+.voice-btn {
+  background: #007aff;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 20px;
+  padding: 0 16px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.2s;
+}
+
+.voice-btn:hover {
+  background: #005fcc;
+  transform: scale(1.05);
+}
+.voice-btn.listening {
+  background: #ff3b30;
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 59, 48, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 59, 48, 0);
+  }
+}
+
+/* =========================================
+   ADD BUTTON
+========================================= */
+
+#add-btn {
+  background: #007aff;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.2s,
+    background 0.2s;
+}
+#add-btn:hover {
+  background: #005fcc;
+  transform: translateY(-2px);
+}
+
+/* =========================================
+   SECTION TITLE
+========================================= */
+
+.section-title {
+  max-width: 900px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.section-title h3 {
+  margin: 0;
+  font-size: 20px;
+}
+#task-count {
+  color: #8e8e93;
+  font-size: 13px;
+}
+
+/* =========================================
+   TASK LIST
+========================================= */
+
+.task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-width: 900px;
+}
+.task-item {
+  background: white;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  font-size: 14px;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.task-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+.task-item > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.task-item strong {
+  word-break: break-word;
+}
+.task-item small {
+  color: #888;
+  font-size: 12px;
+  margin-top: 5px;
+}
+.task-item.completed strong {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+.empty-state {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+/* =========================================
+   TASK ACTIONS
+========================================= */
+
+.actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.task-item button {
+  border: none;
+  color: white;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.task-item button:first-child {
+  background: #007aff;
+}
+.task-item button:last-child {
+  background: #ff3b30;
+}
+.task-item button:hover {
+  transform: scale(1.05);
+}
+
+/* =========================================
+   BADGES
+========================================= */
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: white;
+  margin-right: 6px;
+}
+.badge.Tugas {
+  background: #007aff;
+}
+.badge.Personal {
+  background: #34c759;
+}
+.badge.Acara {
+  background: #ff9500;
+}
+.badge.Janjian {
+  background: #af52de;
+}
+
+/* =========================================
+   CALENDAR
+========================================= */
+
+.calendar-view {
+  width: 100%;
+  max-width: 1000px;
+  margin-top: 10px;
+}
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.calendar-header button {
+  background: #007aff;
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+}
+#current-month {
+  font-weight: 600;
+  font-size: 20px;
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.calendar-day {
+  background: white;
+  border-radius: 8px;
+  padding: 15px 5px;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  font-size: 14px;
+  transition:
+    background 0.2s,
+    transform 0.2s;
+}
+.calendar-day:hover {
+  background: #f0f0f0;
+  transform: translateY(-2px);
+}
+.calendar-day.has-task {
+  background: #e3f2fd;
+}
+.calendar-day.has-task::after {
+  content: "";
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #007aff;
+}
+.calendar-day.other-month {
+  color: #aaa;
+  background: #f5f5f5;
+}
+.calendar-day.other-month.has-task::after {
+  background: #aaa;
+}
+.selected-date-tasks {
+  margin-top: 20px;
+}
+.selected-date-tasks h4 {
+  margin: 10px 0;
+  font-size: 16px;
+}
+#task-list-date {
+  list-style: none;
+  padding: 0;
+}
+#task-list-date li {
+  background: white;
+  padding: 10px;
+  margin-bottom: 5px;
+  border-radius: 8px;
+  font-size: 14px;
+  border-left: 4px solid #007aff;
+}
+
+/* =========================================
+   MODALS
+========================================= */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+  padding: 20px;
+}
+.modal-content {
+  background: white;
+  width: 100%;
+  max-width: 450px;
+  max-height: 80vh;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.modal-header h3 {
+  margin: 0;
+}
+#close-stats,
+#close-snooze {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: inherit;
+}
+.modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* =========================================
+   STATISTICS
+========================================= */
+
+.stat-item {
+  margin-bottom: 15px;
+}
+.stat-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+.progress-bar {
+  height: 8px;
+  background: #e5e5ea;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: #007aff;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+.stat-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  color: white;
+  font-size: 11px;
+  margin-right: 8px;
+}
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+.stat-total {
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+/* =========================================
+   SNOOZE
+========================================= */
+
+.snooze-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+  justify-content: center;
+}
+.snooze-options button {
+  flex: 1 0 40%;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: #007aff;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+#snooze-task-text {
+  font-weight: 500;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+/* =========================================
+   RESPONSIVE NAVIGATION
+========================================= */
+
+.app-navigation {
+  position: fixed;
+  left: 50%;
+  bottom: calc(15px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(460px, calc(100% - 24px));
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 8px;
+  background: #1c1c1e;
+  border-radius: 20px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
+  z-index: 2500;
+}
+
+/* Normal navigation */
+.nav-item {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  background: transparent;
+  color: #8e8e93;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    color 0.2s ease;
+}
+.nav-item:hover {
+  transform: translateY(-3px);
+}
+.nav-item.active {
+  color: white;
+}
+.nav-icon {
+  font-size: 23px;
+  line-height: 1;
+}
+.nav-label {
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* Floating add button */
+.nav-add {
+  position: relative;
+  width: 66px;
+  height: 66px;
+  flex-shrink: 0;
+  margin-top: -38px;
+  border-radius: 50%;
+  border: 6px solid #f2f2f7;
+  background: #007aff;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.25);
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+.nav-add:hover {
+  transform: scale(1.08);
+  background: #005fcc;
+}
+.nav-add-icon {
+  font-size: 30px;
+  line-height: 25px;
+  font-weight: 300;
+}
+.nav-add .nav-label {
+  font-size: 9px;
+}
+
+/* =========================================
+   DARK MODE
+========================================= */
+
+body.dark {
+  background: linear-gradient(135deg, #000, #222);
+  color: white;
+}
+body.dark .app {
+  background: #1c1c1e;
+  color: white;
+}
+body.dark .header-title p {
+  color: #98989d;
+}
+body.dark .header-btn {
+  background: #2c2c2e;
+  color: white;
+}
+body.dark .view-btn,
+body.dark .filter-btn {
+  background: #2c2c2e;
+  color: white;
+}
+body.dark .filter-btn.active[data-filter="All"] {
+  background: white;
+  color: #1c1c1e;
+}
+body.dark .add-task {
+  background: #2c2c2e;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.25);
+}
+body.dark .add-task input,
+body.dark .add-task select,
+body.dark .time-inputs input {
+  border-color: #555;
+  background: #1c1c1e;
+  color: white;
+}
+body.dark .task-item {
+  background: #2c2c2e;
+  color: white;
+}
+body.dark .task-item small {
+  color: #98989d;
+}
+body.dark .calendar-day {
+  background: #2c2c2e;
+  color: white;
+}
+body.dark .calendar-day.has-task {
+  background: #1c3a5f;
+}
+body.dark .calendar-day.other-month {
+  background: #1c1c1e;
+  color: #666;
+}
+body.dark #task-list-date li {
+  background: #2c2c2e;
+  color: white;
+  border-left-color: #0a84ff;
+}
+body.dark .modal-content {
+  background: #2c2c2e;
+  color: white;
+}
+body.dark .stat-row {
+  border-bottom-color: #444;
+}
+body.dark .nav-add {
+  border-color: #1c1c1e;
+}
+
+/* =========================================
+   HIDDEN
+========================================= */
+
+.hidden {
+  display: none !important;
+}
+
+/* =========================================
+   DESKTOP
+========================================= */
+
+@media (min-width: 768px) {
+  .app {
+    padding: 110px 5vw 50px;
+  }
+  .app-header {
+    margin-bottom: 25px;
+  }
+  .app-navigation {
+    top: 20px;
+    bottom: auto;
+    width: min(600px, calc(100% - 40px));
+  }
+  .nav-add {
+    margin-top: 38px;
+  }
+}
+
+/* =========================================
+   LARGE DESKTOP
+========================================= */
+
+@media (min-width: 1200px) {
+  .app {
+    padding-left: 10vw;
+    padding-right: 10vw;
+  }
+}
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width: 767px) {
+  .app {
+    padding: 18px 14px calc(115px + env(safe-area-inset-bottom));
+  }
+  .app-header {
+    margin-bottom: 18px;
+  }
+  .header-title h2 {
+    font-size: 24px;
+  }
+  .add-task {
+    padding: 15px;
+  }
+  .task-item {
+    align-items: flex-start;
+  }
+}
+
+/* =========================================
+   SMALL MOBILE
+========================================= */
+
+@media (max-width: 420px) {
+  .app-navigation {
+    width: calc(100% - 16px);
+    height: 66px;
+    border-radius: 18px;
+  }
+  .nav-icon {
+    font-size: 20px;
+  }
+  .nav-label {
+    font-size: 9px;
+  }
+  .nav-add {
+    width: 60px;
+    height: 60px;
+    margin-top: -32px;
+  }
+  .nav-add-icon {
+    font-size: 27px;
+  }
+  .task-item {
+    flex-direction: column;
+  }
+  .actions {
+    width: 100%;
+  }
+  .actions button {
+    flex: 1;
+  }
+}
+
+/* =========================================
+   REDUCE MOTION
+========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
