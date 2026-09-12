@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+
+    <meta name="theme-color" content="#007aff" />
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <title>Task Reminder</title>
+
+    <link rel="stylesheet" href="style.css" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="icon-192.png" />
+  </head>
+
+  <body>
+    <div class="app">
+      <!-- =====================================
+         APP HEADER
+    ====================================== -->
+
+      <header class="app-header">
+        <div class="header-title">
+          <h2>Reminders</h2>
+          <p>Stay organized</p>
+        </div>
+
+        <div class="header-actions">
+          <button
+            id="stats-btn"
+            class="header-btn"
+            title="Statistics"
+            aria-label="Statistics"
+          >
+            📊
+          </button>
+
+          <button
+            id="theme-toggle"
+            class="header-btn"
+            title="Toggle theme"
+            aria-label="Toggle theme"
+          >
+            🌙
+          </button>
+        </div>
+      </header>
+
+      <!-- =====================================
+         VIEW TOGGLE
+    ====================================== -->
+
+      <div class="view-toggle">
+        <button class="view-btn active" data-view="list">List</button>
+
+        <button class="view-btn" data-view="calendar">Calendar</button>
+      </div>
+
+      <!-- =====================================
+         FILTERS
+    ====================================== -->
+
+      <div class="filters">
+        <button class="filter-btn active" data-filter="All">All</button>
+
+        <button class="filter-btn" data-filter="Tugas">Tugas</button>
+
+        <button class="filter-btn" data-filter="Personal">Personal</button>
+
+        <button class="filter-btn" data-filter="Acara">Acara</button>
+
+        <button class="filter-btn" data-filter="Janjian">Janjian</button>
+      </div>
+
+      <!-- =====================================
+         ADD TASK
+    ====================================== -->
+
+      <section class="add-task">
+        <div class="input-row">
+          <input
+            type="text"
+            id="task-input"
+            placeholder="New reminder..."
+            autocomplete="off"
+          />
+
+          <button
+            id="voice-btn"
+            class="voice-btn"
+            title="Input suara"
+            aria-label="Voice input"
+          >
+            🎤
+          </button>
+        </div>
+
+        <select id="category-input">
+          <option value="Tugas">Tugas</option>
+
+          <option value="Personal">Personal</option>
+
+          <option value="Acara">Acara</option>
+
+          <option value="Janjian">Janjian</option>
+        </select>
+
+        <input type="date" id="date-input" />
+
+        <div class="time-inputs">
+          <input
+            type="number"
+            id="hours-input"
+            placeholder="HH"
+            min="0"
+            max="23"
+          />
+
+          <input
+            type="number"
+            id="minutes-input"
+            placeholder="MM"
+            min="0"
+            max="59"
+          />
+
+          <input
+            type="number"
+            id="seconds-input"
+            placeholder="SS"
+            min="0"
+            max="59"
+          />
+        </div>
+
+        <button id="add-btn">Add Reminder</button>
+      </section>
+
+      <!-- =====================================
+         LIST VIEW
+    ====================================== -->
+
+      <main id="list-view">
+        <div class="section-title">
+          <h3>Your Reminders</h3>
+          <span id="task-count"></span>
+        </div>
+
+        <ul id="task-list" class="task-list"></ul>
+      </main>
+
+      <!-- =====================================
+         CALENDAR VIEW
+    ====================================== -->
+
+      <main id="calendar-view" class="calendar-view hidden">
+        <div class="calendar-header">
+          <button id="prev-month">&lt;</button>
+
+          <span id="current-month"></span>
+
+          <button id="next-month">&gt;</button>
+        </div>
+
+        <div class="calendar-grid" id="calendar-grid"></div>
+
+        <div class="selected-date-tasks">
+          <h4>
+            Tasks on
+            <span id="selected-date"></span>
+          </h4>
+
+          <ul id="task-list-date"></ul>
+        </div>
+      </main>
+
+      <!-- =====================================
+         STATISTICS MODAL
+    ====================================== -->
+
+      <div id="stats-modal" class="modal hidden">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Statistik & Ringkasan</h3>
+
+            <button id="close-stats">&times;</button>
+          </div>
+
+          <div class="modal-body" id="stats-body"></div>
+        </div>
+      </div>
+
+      <!-- =====================================
+         SNOOZE MODAL
+    ====================================== -->
+
+      <div id="snooze-modal" class="modal hidden">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Tunda Pengingat</h3>
+
+            <button id="close-snooze">&times;</button>
+          </div>
+
+          <div class="modal-body">
+            <p id="snooze-task-text"></p>
+
+            <div class="snooze-options">
+              <button data-minutes="5">5 menit</button>
+
+              <button data-minutes="10">10 menit</button>
+
+              <button data-minutes="30">30 menit</button>
+
+              <button data-minutes="60">1 jam</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- =====================================
+         RESPONSIVE NAVIGATION
+    ====================================== -->
+
+      <nav class="app-navigation" aria-label="Main navigation">
+        <button class="nav-item active" id="nav-home" aria-label="Home">
+          <span class="nav-icon"> ⌂ </span>
+
+          <span class="nav-label"> Home </span>
+        </button>
+
+        <button class="nav-item" id="nav-calendar" aria-label="Calendar">
+          <span class="nav-icon"> ▣ </span>
+
+          <span class="nav-label"> Calendar </span>
+        </button>
+
+        <button class="nav-add" id="nav-add" aria-label="Add reminder">
+          <span class="nav-add-icon"> + </span>
+
+          <span class="nav-label"> Add </span>
+        </button>
+
+        <button class="nav-item" id="nav-stats" aria-label="Statistics">
+          <span class="nav-icon"> ▥ </span>
+
+          <span class="nav-label"> Stats </span>
+        </button>
+
+        <button class="nav-item" id="nav-settings" aria-label="Settings">
+          <span class="nav-icon"> ⚙ </span>
+
+          <span class="nav-label"> Theme </span>
+        </button>
+      </nav>
+
+      <!-- =====================================
+         AUDIO
+    ====================================== -->
+
+      <audio id="delete-sound" preload="auto">
+        <source
+          src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA="
+          type="audio/wav"
+        />
+      </audio>
+
+      <audio id="alarm-sound" src="alarm.mp3" preload="auto"></audio>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
